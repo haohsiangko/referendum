@@ -1,0 +1,419 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Untitled Document</title>
+    <script src="https://d3js.org/d3.v3.js"></script>
+    <script src="topojson.min.js"></script>
+    <style>
+        body{
+            background-color: #eee;
+        }
+        .map-boundary {
+          stroke: #eee;
+          stroke-width: 0.2px;
+        }
+        
+         #tooltip{
+          position: absolute;
+          /* left: 20px; */
+          /* top:  100px; */
+          background-color: black;
+         opacity: 0.9;
+         color: white;
+          width: 90px;
+          height: auto;
+          padding: 0px 10px;
+          border-radius: 5px;
+          box-shadow: 5px 5px 10px rgba(0,0,0,0.3);
+            font-size: 1px;
+        }
+        
+         #tooltip.hidden{
+          display: none;
+        } 
+    </style>
+    <title>第14案</title>
+</head>
+<body>
+<!--   <input type="checkbox" name="臺東縣" value="臺東縣">臺東縣<br>-->
+<!--
+<p>在瀏覽器中ctrl(command) + 放大來看</p>
+ <p>green: 同意票占有效票比率>=30%</p>
+ <p>從code可以很快改條件畫圖，但友善介面可能要等等，目前適合探索</p>
+  
+-->
+   <!--     tooltip          -->
+                           <div id="tooltip" class="hidden">
+                                <p><strong id="tooltip_CityName">直轄市/縣、市</strong></p>
+                                <p id="tooltip_ScopeTownshipName">行政區</p><!--到時候county, township都在這行--> 
+                                <p id="tooltip_CaseNum">公投案號次</p>
+                                <p id="tooltip_PeopleCanVote">投票權人數</p>
+                                <p id="tooltip_AgreeNum">同意票</p>
+                                <p id="tooltip_AgreeRate">同意票占比</p>
+                                <p id="tooltip_DisagreeNum">不同意票</p>
+                                <p id="tooltip_DisagreeRate">不同意票占比</p>
+                                <p id="tooltip_VoteRate">投票率</p>
+                                <p id="tooltip_SpoiltVoteRate">無效票占投票人數比例</p>
+                                <p id="tooltip_AgreeToAll">有效同意票對投票權人數百分比</p>
+                            </div>  
+                                          
+
+    <svg width="1200" height="700"></svg>
+    
+    <script>
+        
+
+//原本想嘗試自動讀入spreadsheet數據
+//d3.json("https://spreadsheets.google.com/feeds/cells/1PL96_fjS9fma5z1hhZ1APCcNzQPYUgcR9ub1EQn6XjI/1/public/values?alt=json", function(d){
+//    console.log(d.feed.entry[0].gs$cell);
+//})
+
+
+        var projection;
+        
+        //這裡要放選舉數據
+        d3.json("14.json", function(dataSet){
+            
+//            console.log(dataSet);
+            
+//            var cases = []; 
+            var nDataSet = dataSet.filter(function(d){
+                return d["公投案號次"]===14 ;
+            });
+//            var nDataSet = d3.nest().key(function(d){ return d["居住縣市"];})
+//                        .rollup(function(v){ return v.length;})
+//                        .entries(dataSet); 
+//                        
+//            nDataSet.forEach(function(d){
+//                             cases[d.key]=d.values;
+//                        });
+//           nDataSet.forEach(function(d){
+////               console.log(d.直轄市[0]);
+//               if(d.直轄市[0] === "台"){
+//                   d.直轄市 = "臺" + d.直轄市.substr(1);
+//               } 
+////               console.log(d.直轄市[0]);
+//           });
+            
+            console.log(nDataSet);
+
+            
+            
+             //1.地理資料檔: GeoJSON or TopoJSON
+                d3.json("TOWN_MOI_1071031.json", function(mapDataSet) {
+
+                  
+        //            console.log(mapDataSet);
+
+                    bind(mapDataSet, nDataSet);
+//                    console.log("test2");
+                    render(nDataSet); 
+//                    console.log("test");
+
+
+                }); 
+            
+            
+        });
+                   
+        
+        
+        
+        
+        
+        
+        
+         var fScale_green = d3.scale.linear().domain([0,0.5]).range(["#CCFF99","#227700"]);
+            var fScale_gray = d3.scale.linear().domain([0,1]).range(["#fff","#333"]);
+
+
+        
+        function render(dataSet){
+            //從這裡開始修改 
+            
+            console.log(dataSet);
+            
+            
+//            var fScale_blue = d3.scale.linear().domain([0,1]).range(["#CCEEFF","#003377"]);
+           
+            
+//            var fScale = d3.scale.linear().domain(0,d3.max(dataSet,function(d){return d.values;})).range("#00f","#f00");
+
+            
+//            console.log("done");
+            
+            
+            var districts =  d3.select("svg").selectAll("path");
+//            console.log("districts");
+//            console.log(districts);
+//          
+            
+            
+            
+            districts.attr({
+                fill: function(d){
+//                    console.log("hi");
+//                    console.log(d);
+//                            return fScale_gray(d.properties.VoteRate);
+                             if(d.properties.AgreeRate >= 0.3){
+                                    return fScale_green(d.properties.AgreeRate);
+                             }else{
+                                    return fScale_gray(d.properties.DisagreeRate);
+                             }
+                      
+                  
+//                  
+                   
+                }
+            }).on("mouseenter", handleMouseOver)
+            .on("mouseleave", handleMouseOut);
+
+ 
+            
+           
+            console.log("rendered");
+            
+
+            //tooltip
+            
+     
+            
+            
+                        
+                        
+                        
+//                        //改變圓的顏色
+//                        d3.select(this).style("fill","black");
+//                        
+//                        var moveDown = document.getElementById('map').offsetTop;
+//                        var moveRight = document.getElementById('map').offsetLeft;
+                       
+//加上class
+            d3.select("svg").selectAll("path").attr(
+                                            "class", function(d){return d.properties.CityName + " map-boundary";},
+                                            );
+//            
+         } //render
+        
+        
+         function handleMouseOver(d,i){
+
+
+                   d3.select(this).attr({
+                                opacity: 0.3
+                            });
+
+             //讀取圓的位置，要這樣寫，不能用this，要用d
+                        var tooltipX = d3.mouse(this)[0];
+                        var tooltipY = d3.mouse(this)[1];
+                        
+                        console.log(tooltipX+","+tooltipY);
+            
+             
+                        //改變tooltip位置
+                        d3.select("#tooltip").style({
+                            left: tooltipX+10+"px", //要這樣寫
+                            top: tooltipY+10+"px"
+                        });
+             
+
+            
+             //替換內容
+                        d3.select("#tooltip_CityName").text(d.properties.CityName);
+                        d3.select("#tooltip_ScopeTownshipName").text(d.properties.ScopeTownshipName);
+                        d3.select("#tooltip_CaseNum").text("公投案號次："+d.properties.CaseNum);
+                        d3.select("#tooltip_PeopleCanVote").text("投票權人數："+d.properties.PeopleCanVote);
+                        d3.select("#tooltip_AgreeNum").text("同意票："+d.properties.AgreeNum);
+                        d3.select("#tooltip_AgreeRate").text("同意票占比："+d.properties.AgreeRate);
+                        d3.select("#tooltip_DisagreeNum").text("不同意票："+d.properties.DisagreeNum);
+                        d3.select("#tooltip_DisagreeRate").text("不同意票占比："+d.properties.DisagreeRate);
+                        d3.select("#tooltip_VoteRate").text("投票率："+d.properties.VoteRate);
+              d3.select("#tooltip_SpoiltVoteRate").text("無效票占投票人數比例："+d.properties.SpoiltVoteRate);
+              d3.select("#tooltip_AgreeToAll").text("有效同意票對投票權人數百分比："+d.properties.AgreeToAll);
+             
+            
+                        
+              //顯現
+                        d3.select("#tooltip").classed("hidden", false); 
+                        
+
+        }
+        
+        
+       function handleMouseOut(d,i){
+                      
+
+                  d3.select(this).attr({
+                            opacity: 1
+                        });
+                        
+                        
+                        
+                        
+
+                        d3.select("#tooltip").classed("hidden", true);
+                        
+                        d3.select(this).style({
+                            
+                            fill: function(d){
+//                                  return fScale_gray(d.properties.VoteRate);               
+                             if(d.properties.AgreeRate >= 0.3){
+                                return fScale_green(d.properties.AgreeRate);
+                              }else {
+                                  return fScale_gray(d.properties.DisagreeRate);
+                              }
+                            }
+                        });
+            
+                
+            }
+                        
+                        
+
+      
+
+
+
+
+       
+
+
+
+        
+        function bind(topoRoot, dataSet){
+            
+            
+            
+            
+
+            
+            // 2.地理投影器: 設定投影方式(麥卡托)、定位點([經度,緯度])、縮放(scale)
+             projection = d3.geo.mercator().center([121,23.5]).scale(3000);    
+            
+            // 3.路徑產生器: d3.geo.path()
+            var path = d3.geo.path().projection(projection);
+            
+            
+//             4.地理資料檔: 使用topojson.js載入地理資料
+            var geoRoot = topojson.feature(topoRoot, topoRoot.objects["TOWN_MOI_1071031"]);
+//            .filter(function(d){
+//                return d.properties.COUNTYNAME==="臺北市";
+//            }); 
+            //這邊要根據topojson檔去調整
+                
+           console.log(geoRoot);
+            
+            
+            
+            geoRoot.features.forEach(function(d){
+//                
+              
+                var filteredData;
+               
+                for(var i=0; i<dataSet.length; i++){
+                    
+                    //把數據都對起來
+                    if(d.properties.COUNTYNAME===dataSet[i].CityName && d.properties.TOWNNAME===dataSet[i].ScopeTownshipName){
+                        
+                        //topojson裡頭新增key，綁定dataSet的數據
+                   d.properties.CityName = dataSet[i].CityName;
+                        d.properties.ScopeTownshipName = dataSet[i].ScopeTownshipName;
+                        d.properties.CaseNum = dataSet[i].公投案號次;
+                        d.properties.PeopleCanVote = dataSet[i].投票權人數;
+                   d.properties.AgreeNum = dataSet[i].同意票;
+                   d.properties.AgreeRate = dataSet[i].同意票占有效票比率;
+                   d.properties.DisagreeNum = dataSet[i].不同意票;
+                   d.properties.DisagreeRate = dataSet[i].不同意票占有效票比率;
+                        d.properties.VoteRate = dataSet[i].投票率;
+                        d.properties.SpoiltVoteRate = dataSet[i].無效票占投票人數比例;
+                        d.properties.AgreeToAll = dataSet[i].有效同意票對投票權人數百分比;
+                        
+                        
+                   }
+                }
+//                console.log(dataSet[i].地區);
+                
+            
+                
+                
+                
+                
+                
+                
+                
+//                console.log("here");
+                console.log(d.properties.COUNTYNAME, d.properties.TOWNNAME, d.properties.AgreeRate,  d.properties.DisagreeRate);
+//                d.properties.values = dataSet["地區"];
+                
+              
+//                
+//                
+//                if(dataSet[d.properties.COUNTYNAME]){ //這樣寫
+//                   
+//                    d.properties.count = dataSet[d.properties.COUNTYNAME];}
+//                
+//                else if(d.properties.COUNTYNAME[0]==="臺"){
+//                            d.properties.count = dataSet["台"+d.properties.COUNTYNAME.substr(1)];
+//                        }
+//                else{
+//                    d.properties.count = 0;
+//                }
+//                
+//                console.log(d.properties.count,d.properties.COUNTYNAME);
+////                console.log("here");
+////                    console.log(d);
+//                
+//
+            });
+           
+            
+            
+            
+            
+            var filteredData = [];
+            //去除我不要的資料
+            for(var i=0; i<geoRoot.features.length; i++){
+                if(geoRoot.features[i].properties.CityName === "臺東縣" ){
+                        filteredData.push(geoRoot.features[i]);
+                   }
+               
+            }
+             console.log(filteredData);    
+            
+            
+
+            // 綁定path與載入的地理資料(features:每一地理區劃)
+
+            
+//            var g = d3.select("svg").selectAll("g").data(geoRoot.features);
+//            g.enter().append("g").attr("class", function(d){return d.properties.CityName;});
+//            g.exit().remove();
+            
+            
+            
+            
+            
+            //
+           var selection =d3.select("svg").selectAll("path").data(geoRoot.features);
+
+           
+              
+            selection.enter().append("path").classed("map-boundary", true).attr("d", path);
+
+
+            selection.exit().remove();
+            
+            
+            
+            console.log("binded");
+
+//            console.log(selection);
+
+        }
+
+
+    </script>
+
+</body>
+</html>
