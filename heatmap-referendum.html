@@ -227,7 +227,7 @@ drawSelection(selected_num, selected_index, selected_logic, selected_range, sele
             d3.select("svg").selectAll("text").remove();
             d3.select("#histogram").selectAll("svg").remove();
             
-            d3.json("/json/"+num+".json", function(dataSet){
+            d3.json("./json/"+num+".json", function(dataSet){
             
 //            console.log(dataSet);
             
