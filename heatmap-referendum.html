@@ -2,13 +2,22 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Untitled Document</title>
+
     <script src="https://d3js.org/d3.v3.js"></script>
     <script src="topojson.min.js"></script>
+    
     <style>
         body{
             background-color: #eee;
+            height: 2000px;
         }
+        
+        #heatmap{
+
+            background-color: #eee;
+        }
+       
+        
         .map-boundary {
           stroke: #eee;
           stroke-width: 0.2px;
@@ -32,8 +41,15 @@
          #tooltip.hidden{
           display: none;
         } 
+
+        #histogram{
+            background-color: #fff;
+           position: absolute;
+           /*top: 0;*/
+           top: 0; 
+        }
     </style>
-    <title>第14案</title>
+    <title>公投結果探索器</title>
 </head>
 <body>
 <!--   <input type="checkbox" name="臺東縣" value="臺東縣">臺東縣<br>-->
@@ -59,8 +75,105 @@
                             </div>  
                                           
 
-    <svg width="1200" height="700"></svg>
     
+    
+    <svg width="1200" height="700" id="heatmap"></svg>
+    <div id="histogram"></div>
+    <br>
+    
+    
+
+    
+    
+    
+    
+    <!--公投號案次選擇-->
+    <select id="selectNum" onChange="
+   renew();
+   
+    ">
+<!--           <select onChange="location = this.options[this.selectedIndex].value;">-->
+        <option value="7">第7案（每年至少降火力發電量1%) </option>
+        <option value="8">第8案（停止新建燃煤電廠）</option>
+        <option value="9">第9案（維持禁止日本核食）</option>
+        <option value="10">第10案（民法婚姻一男一女）</option>
+        <option value="11">第11案（反對國中小同志教育）</option>
+        <option value="12">第12案（同婚民法以外形式）</option>
+        <option value="13">第13案（台灣為名參加東奧）</option>
+        <option value="14">第14案（民法保障同婚）</option>
+        <option value="15">第15案（性平教育）</option>
+        <option value="16">第16案（廢除電業法第95條第1項）</option>
+    </select>
+    
+    <!--數值依據-->
+    <select id="selectIndex" onChange="
+    
+   renew();
+       ">
+        
+        <option value="AgreeRate">同意票比率</option>
+        <option value="DisagreeRate">不同意票比率</option>
+        <option value="VoteRate">投票率</option>
+        <option value="SpoiltVoteRate">無效票占投票人數比例</option>
+        <option value="AgreeToAll">有效同意票對投票權人數百分比</option>
+             
+    </select>
+
+   <!--判斷-->
+     <select id="selectLogic" onChange="
+   renew();
+       ">
+        
+        <option value=">">&gt;</option>
+        <option value=">=">&ge;</option>
+        <option value="=">=</option>
+        <option value="<">&lt;</option>
+        <option value="<=">&le;</option>
+
+    </select>
+
+
+   
+    <!--輸入range數值-->
+   <input type="text" id="range" value="0" onChange="renew();">（0-1之間）
+
+   <br>
+  
+   （符合之色碼）　
+    <!--符合條件：0%顏色-->
+   0%：<input type="text" id="colorT0" value="#CCFF99" onChange="renew();">　
+     <!--符合條件：100%顏色-->
+   100%：<input type="text" id="colorT1" value="#227700" onChange="renew();">
+<br>
+   （不符合之色碼）
+    <!--符合條件：0%顏色-->
+   0%：<input type="text" id="colorF0" value="#fff" onChange="renew();">　
+     <!--符合條件：100%顏色-->
+   100%：<input type="text" id="colorF1" value="#333" onChange="renew();">
+
+   
+
+
+
+
+    <!--     
+         var fScale_green = d3.scale.linear().domain([0,0.5]).range(["#CCFF99","#227700"]);
+            var fScale_gray = d3.scale.linear().domain([0,1]).range(["#fff","#333"]);
+
+ -->
+
+
+<hr>
+
+   
+   <p>用紐時製作的<a href="https://nytimes.github.io/svg-crowbar/">SVG CROWBAR</a>下載svg。用chrome開啟上面連結，加入書籤。回本頁面，按書籤下載svg，用Illustrator打開後製。</p>
+   
+<hr>
+<p id="filteredSummary">篩出的資料</p>
+<p id="filteredData"></p>
+
+
+   
     <script>
         
 
@@ -68,18 +181,59 @@
 //d3.json("https://spreadsheets.google.com/feeds/cells/1PL96_fjS9fma5z1hhZ1APCcNzQPYUgcR9ub1EQn6XjI/1/public/values?alt=json", function(d){
 //    console.log(d.feed.entry[0].gs$cell);
 //})
+//d3.select("svg").append("rect").attr({x: 270, y:300, width: 70, height: 50, "stroke-width": 1, stroke: "black", fill: "rgba(0,0,0,0)"});  
+//抓取下拉式選單的值
 
 
-        var projection;
-        
-        //這裡要放選舉數據
-        d3.json("14.json", function(dataSet){
+
+
+
+
+renew();
+
+function renew(){
+    
+    
+    
+var s1 = document.getElementById('selectNum');
+var selected_num = +s1.options[s1.selectedIndex].value;
+var s2 = document.getElementById('selectIndex');
+var selected_index = s2.options[s2.selectedIndex].value;
+var selected_range = document.getElementById("range").value;
+var s3 = document.getElementById('selectLogic');
+var selected_logic = s3.options[s3.selectedIndex].value;
+var selected_colorT0 = document.getElementById("colorT0").value;
+var selected_colorT1 = document.getElementById("colorT1").value;
+var selected_colorF0 = document.getElementById("colorF0").value;
+var selected_colorF1 = document.getElementById("colorF1").value;
+
+
+   var fScale_green = d3.scale.linear().domain([0,0.5]).range([selected_colorT0,selected_colorT1]);
+   var fScale_gray = d3.scale.linear().domain([0,1]).range([selected_colorF0,selected_colorF1]);
+
+
+
+
+
+console.log("檢查原始");
+console.log(selected_num, selected_index, selected_logic, selected_range, selected_colorT0, selected_colorT1, selected_colorF0, selected_colorF1);
+
+drawSelection(selected_num, selected_index, selected_logic, selected_range, selected_colorT0, selected_colorT1, selected_colorF0, selected_colorF1);
+
+        function drawSelection(num, index, logic, range, colorT0, colorT1, colorF0, colorF1){
+            d3.select("svg").selectAll("path").remove();
+            d3.select("svg").selectAll("rect").remove();
+            d3.select("svg").selectAll("g").remove();
+            d3.select("svg").selectAll("text").remove();
+            d3.select("#histogram").selectAll("svg").remove();
+            
+            d3.json("/json/"+num+".json", function(dataSet){
             
 //            console.log(dataSet);
             
 //            var cases = []; 
             var nDataSet = dataSet.filter(function(d){
-                return d["公投案號次"]===14 ;
+                return d["公投案號次"]===num ;
             });
 //            var nDataSet = d3.nest().key(function(d){ return d["居住縣市"];})
 //                        .rollup(function(v){ return v.length;})
@@ -99,7 +253,26 @@
             console.log(nDataSet);
 
             
+             //金門底
+                 d3.select("svg").append("rect").attr({x: 270, y:300, width: 70, height: 50, "stroke-width": 0.5, stroke: "black", fill: "#eee"});
+            //金門烏坵底
+                 d3.select("svg").append("rect").attr({x: 328, y:303, width: 8, height: 8, "stroke-width": 0.5, stroke: "black", fill: "#eee"});    
+                
+                
+                
+                //連江底
+                d3.select("svg").append("rect").attr({x: 270, y:224, width: 70, height: 50, "stroke-width": 0.5, stroke: "black", fill: "#eee"});
+                 //連江東引底
+                 d3.select("svg").append("rect").attr({x: 328, y:227, width: 8, height: 8, "stroke-width": 0.5, stroke: "black", fill: "rgba(0,0,0,0)"}); 
+                
+                
+                
             
+                
+                
+                
+                
+                
              //1.地理資料檔: GeoJSON or TopoJSON
                 d3.json("TOWN_MOI_1071031.json", function(mapDataSet) {
 
@@ -108,30 +281,93 @@
 
                     bind(mapDataSet, nDataSet);
 //                    console.log("test2");
-                    render(nDataSet); 
+                    
+                    render(nDataSet, index, logic, range, colorT0, colorT1, colorF0, colorF1); 
 //                    console.log("test");
 
 
+
                 }); 
+                
+               
+                
             
             
         });
-                   
-        
-        
-        
-        
-        
-        
-        
-         var fScale_green = d3.scale.linear().domain([0,0.5]).range(["#CCFF99","#227700"]);
-            var fScale_gray = d3.scale.linear().domain([0,1]).range(["#fff","#333"]);
+        }//drawSelection
+    
+}//renew
 
 
+
+        var projection;
         
-        function render(dataSet){
+//        //這裡要放選舉數據
+//        d3.json("14.json", function(dataSet){
+//            
+////            console.log(dataSet);
+//            
+////            var cases = []; 
+//            var nDataSet = dataSet.filter(function(d){
+//                return d["公投案號次"]===14 ;
+//            });
+////            var nDataSet = d3.nest().key(function(d){ return d["居住縣市"];})
+////                        .rollup(function(v){ return v.length;})
+////                        .entries(dataSet); 
+////                        
+////            nDataSet.forEach(function(d){
+////                             cases[d.key]=d.values;
+////                        });
+////           nDataSet.forEach(function(d){
+//////               console.log(d.直轄市[0]);
+////               if(d.直轄市[0] === "台"){
+////                   d.直轄市 = "臺" + d.直轄市.substr(1);
+////               } 
+//////               console.log(d.直轄市[0]);
+////           });
+//            
+//            console.log(nDataSet);
+//
+//            
+//            
+//             //1.地理資料檔: GeoJSON or TopoJSON
+//                d3.json("TOWN_MOI_1071031.json", function(mapDataSet) {
+//
+//                  
+//        //            console.log(mapDataSet);
+//
+//                    bind(mapDataSet, nDataSet);
+////                    console.log("test2");
+//                    render(nDataSet); 
+////                    console.log("test");
+//
+//
+//                }); 
+//            
+//            
+//        });
+//                   
+//        
+        
+        
+        
+        
+        
+        
+      
+
+        
+        function render(dataSet, index, logic, range, colorT0, colorT1, colorF0, colorF1){
             //從這裡開始修改 
             
+         var fScale_green = d3.scale.linear().domain([0,0.5]).range([colorT0,colorT1]);
+         var fScale_gray = d3.scale.linear().domain([0,1]).range([colorF0,colorF1]);
+
+
+
+
+
+            console.log("render: dataSet");
             console.log(dataSet);
             
             
@@ -145,22 +381,69 @@
             
             
             var districts =  d3.select("svg").selectAll("path");
-//            console.log("districts");
-//            console.log(districts);
+           // console.log("districts");
+           // console.log(districts);
 //          
-            
+            //outputData
+            var dataTrue = [];
+            function outputData(d){
+                dataTrue.push({"CityName": d.properties.CityName, 
+                                               "ScopeTownshipName": d.properties.ScopeTownshipName,
+                                               "Value": d.properties[index]
+                                              });
+            }
             
             
             districts.attr({
                 fill: function(d){
-//                    console.log("hi");
-//                    console.log(d);
+                    
+                    //這裡決定要用什麼數值畫圖
+                   // console.log("hi");
+                   // console.log(d);
 //                            return fScale_gray(d.properties.VoteRate);
-                             if(d.properties.AgreeRate >= 0.3){
-                                    return fScale_green(d.properties.AgreeRate);
+                        if(logic===">"){
+                            if(d.properties[index] > range){
+                                outputData(d);                                
+                                    return fScale_green(d.properties[index]);
                              }else{
-                                    return fScale_gray(d.properties.DisagreeRate);
+                                    return fScale_gray(d.properties[index]);
                              }
+                        }else if(logic===">="){
+                            if(d.properties[index] >= range){
+                                outputData(d); 
+                                    return fScale_green(d.properties[index]);
+                             }else{
+                                    return fScale_gray(d.properties[index]);
+                             }
+
+                        }else if(logic==="="){
+                            if(d.properties[index] === range){
+                                outputData(d); 
+                                    return fScale_green(d.properties[index]);
+                             }else{
+                                    return fScale_gray(d.properties[index]);
+                             }
+
+                        }else if(logic==="<"){
+                            if(d.properties[index] < range){
+                                outputData(d); 
+                                    return fScale_green(d.properties[index]);
+                             }else{
+                                    return fScale_gray(d.properties[index]);
+                             }
+
+                        }else if(logic==="<="){
+                            if(d.properties[index] <= range){
+                                outputData(d); 
+                                    return fScale_green(d.properties[index]);
+                             }else{
+                                    return fScale_gray(d.properties[index]);
+                             }
+                        }
+
+
+
+                             
                       
                   
 //                  
@@ -169,8 +452,27 @@
             }).on("mouseenter", handleMouseOver)
             .on("mouseleave", handleMouseOut);
 
- 
+            console.log("篩出的資料");
+            console.log(dataTrue);
+           
+           
+            dataTrue.sort(function(a, b){return b.Value-a.Value;});
+
+
+
+
             
+            document.getElementById("filteredSummary").innerHTML = "在368筆資料中找到 " + dataTrue.length +" 筆（鄉鎮市區），占全部筆數的 " + Math.round(dataTrue.length/368*10000)/100 +"%";
+
+            var sI = document.getElementById('selectIndex');
+            var sI_text = sI.options[sI.selectedIndex].innerHTML;
+
+            var t = "縣市, 鄉鎮市區, "+ sI_text +"<br>";
+            for(var i=0; i<dataTrue.length; i++){
+                t = t + dataTrue[i].CityName + "," + dataTrue[i].ScopeTownshipName + "," + dataTrue[i].Value + "<br>";
+     
+            }
+            document.getElementById("filteredData").innerHTML = t;
            
             console.log("rendered");
             
@@ -191,21 +493,294 @@
                        
 //加上class
             d3.select("svg").selectAll("path").attr(
-                                            "class", function(d){return d.properties.CityName + " map-boundary";},
+                                            "class", function(d){return d.properties.CityName + " map-boundary " + d.properties.ScopeTownshipName;},
                                             );
+            
+            
+            //改變離島位置
+d3.select("svg").selectAll(".金門縣").attr("transform", "translate(150,0)");
+d3.select("svg").selectAll(".連江縣").attr("transform", "translate(-50,150)");
+d3.select("svg").selectAll(".烏坵鄉").attr("transform", "translate(40,55)");
+d3.select("svg").selectAll(".東引鄉").attr("transform", "translate(-85,168)");            
+
+          
 //            
+            console.log("金門");
+            console.log(d3.select("svg").selectAll(".金門縣"));
+            
+            
+            //圖例1
+            var startX = 650;
+            var startY = 450;
+            var bar_width = 10;
+            var bar_data = [1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]
+            
+            
+            
+            var bar = d3.select("svg").selectAll("g").data(bar_data).enter().append("g");
+
+            bar.append("rect").attr({
+                width: bar_width,
+                height: bar_width,
+                fill: function(d){return fScale_green(d);},
+                x: startX,
+                y: function(d,i){return startY+bar_width*i+5;}
+            });
+
+            bar.append("text").attr({
+                x: startX+15,
+                y: function(d,i){return startY+bar_width*(i+0.8)+5;},
+                "font-size": 9
+            }).text(function(d){return d;});
+
+            var trueText = d3.select("svg").append("text").attr({
+                x: startX,
+                y: startY-bar_width,
+                "font-size": 15
+            }).text("符合");
+
+            var title0 = document.getElementById('selectNum');
+            var titleText0 = title0.options[title0.selectedIndex].innerHTML;
+            var title1 = document.getElementById('selectIndex');
+            var titleText1 = title1.options[title1.selectedIndex].innerHTML;
+            var title2 = document.getElementById('selectLogic');
+            var titleText2 = title2.options[title2.selectedIndex].value;
+            var titleText3 = document.getElementById("range").value;
+
+
+            var trueText = d3.select("svg").append("text").attr({
+                x: startX,
+                y: startY-bar_width-30-30,
+                "font-size": 30
+            }).text(titleText0);
+
+
+
+            var trueText = d3.select("svg").append("text").attr({
+                x: startX,
+                y: startY-bar_width-30,
+                "font-size": 15
+            }).text(titleText1+titleText2+titleText3);
+
+  
+            //圖例2
+            var startX2 = 700;
+            var startY2 = 450;
+            var bar_data2 = [1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]
+            
+            
+            
+            
+            bar.append("rect").attr({
+                width: bar_width,
+                height: bar_width,
+                fill: function(d){return fScale_gray(d);},
+                x: startX2,
+                y: function(d,i){return startY2+bar_width*i+5;}
+            });
+
+            bar.append("text").attr({
+                x: startX2+15,
+                y: function(d,i){return startY2+bar_width*(i+0.8)+5;},
+                "font-size": 9
+            }).text(function(d){return d;});
+
+            var trueText2 = d3.select("svg").append("text").attr({
+                            x: startX2,
+                            y: startY2-bar_width,
+                            "font-size": 15
+                        }).text("不符合");
+console.log(bar_data);
+
+
+
+
+
+            
+            
+            
+            
+//            
+//            var bar = chart.selectAll("g")
+//    .data(data)
+//  .enter().append("g")
+//    .attr("transform", function(d, i) { return "translate(0," + i * barHeight + ")"; });
+//
+//bar.append("rect")
+//    .attr("width", x)
+//    .attr("height", barHeight - 1);
+//
+//bar.append("text")
+//    .attr("x", function(d) { return x(d) - 3; })
+//    .attr("y", barHeight / 2)
+//    .attr("dy", ".35em")
+//    .text(function(d) { return d; });
+//            
+//            
+           
+
+//histogram
+ var formatCount = d3.format(",.0f");
+
+ var margin = {top: 80, right: 30, bottom: 30, left: 30}, //調top可以讓bar不要太高
+     width = 400 - margin.left - margin.right,
+     height = 200 - margin.top - margin.bottom;
+
+
+
+var s1 = document.getElementById('selectNum');
+var selected_num = +s1.options[s1.selectedIndex].value;
+var s2 = document.getElementById('selectIndex');
+var selected_index = s2.options[s2.selectedIndex].innerHTML;
+
+console.log("histogram check index");
+console.log(selected_index);
+var hValue;
+if(selected_index === "同意票比率"){
+    hValue = "同意票占有效票比率";
+}else if(selected_index === "不同意票比率"){
+    hValue = "不同意票占有效票比率";
+}else if(selected_index === "投票率"){
+    hValue = "投票率";
+}else if(selected_index === "無效票占投票人數比例"){
+    hValue = "無效票占投票人數比例";
+}else if(selected_index === "有效同意票對投票權人數百分比"){
+    hValue = "有效同意票對投票權人數百分比";
+}
+
+
+//只留下選定之數值
+ var values = dataSet.map(function(d){return d[hValue];});
+ console.log("histogramValue");
+            console.log(values);
+
+        var max = d3.max(values);
+        var min = d3.min(values);
+        var x = d3.scale.linear()
+              .domain([min, max])
+              .range([0, width]);
+
+// Generate a histogram using twenty uniformly-spaced bins.
+        var data = d3.layout.histogram()
+            .bins(x.ticks(20))
+            (values);
+
+        var yMax = d3.max(data, function(d){return d.length});
+        var yMin = d3.min(data, function(d){return d.length});
+        // var colorScale = d3.scale.linear()
+        //             .domain([yMin, yMax])
+        //             .range([d3.rgb(color).brighter(), 
+        //                 d3.rgb(color).darker()]);
+
+        var y = d3.scale.linear()
+            .domain([0, yMax])
+            .range([height, 0]);
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom");
+
+        var h_svg = d3.select("#histogram").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+
+        d3.select("#histogram").select("svg").append("text").attr({
+            "x": 30,
+            "y": 50,
+            "fill": "black"
+        }).text("資料分布狀況（"+selected_index+"）/ 第"+selected_num+"案");
+
+
+        var h_bar = h_svg.selectAll(".bar")
+            .data(data)
+          .enter().append("g")
+            .attr("class", "bar")
+            .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+         h_bar.append("rect")
+    .attr("x", 1)
+    .attr("width", (x(data[0].dx) - x(0)) - 1)
+    .attr("height", function(d) { return height - y(d.y); })
+    .attr("fill", "black")
+
+    h_bar.append("text")
+    .attr("dy", ".75em")
+    .attr("y", -12)
+    .attr("x", (x(data[0].dx) - x(0)) / 2)
+    .attr("text-anchor", "middle")
+    .attr("font-size", 10)//bar上方的字級
+    .text(function(d) { return formatCount(d.y); });
+
+h_svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+    d3.selectAll(".axis>.tick>text")
+  .each(function(d, i){
+    d3.select(this).style("font-size","10");//x軸的字級
+  });
+
+  d3.selectAll(".axis>path")
+    .attr("fill", "#fff");
+
+
+
+
+
+
+
+
+
+
+            
+            
+            
+            
          } //render
         
         
-         function handleMouseOver(d,i){
+         function handleMouseOver(d,index){
 
 
                    d3.select(this).attr({
                                 opacity: 0.3
                             });
-
-             //讀取圓的位置，要這樣寫，不能用this，要用d
-                        var tooltipX = d3.mouse(this)[0];
+             
+             console.log(d);
+             if(d.properties.CityName==="金門縣"){
+                 console.log("碰到金門");
+                  var tooltipX = 340;
+                   var tooltipY = 300;
+                        
+                        console.log(tooltipX+","+tooltipY);
+            
+             
+                        //改變tooltip位置
+                        d3.select("#tooltip").style({
+                            left: tooltipX+10+"px", //要這樣寫
+                            top: tooltipY+10+"px"
+                        });
+             }else if(d.properties.CityName==="連江縣"){
+                 var tooltipX = 340;
+                        var tooltipY = 224;
+                        
+                        console.log(tooltipX+","+tooltipY);
+            
+             
+                        //改變tooltip位置
+                        d3.select("#tooltip").style({
+                            left: tooltipX+10+"px", //要這樣寫
+                            top: tooltipY+10+"px"
+                        });
+             }
+             else{
+                    var tooltipX = d3.mouse(this)[0];
                         var tooltipY = d3.mouse(this)[1];
                         
                         console.log(tooltipX+","+tooltipY);
@@ -217,6 +792,12 @@
                             top: tooltipY+10+"px"
                         });
              
+             }
+             
+             
+
+             //讀取圓的位置，要這樣寫，不能用this，要用d
+                     
 
             
              //替換內容
@@ -241,7 +822,7 @@
         }
         
         
-       function handleMouseOut(d,i){
+       function handleMouseOut(d){
                       
 
                   d3.select(this).attr({
@@ -254,17 +835,17 @@
 
                         d3.select("#tooltip").classed("hidden", true);
                         
-                        d3.select(this).style({
-                            
-                            fill: function(d){
-//                                  return fScale_gray(d.properties.VoteRate);               
-                             if(d.properties.AgreeRate >= 0.3){
-                                return fScale_green(d.properties.AgreeRate);
-                              }else {
-                                  return fScale_gray(d.properties.DisagreeRate);
-                              }
-                            }
-                        });
+//                        d3.select(this).style({
+//                            
+//                            fill: function(d){
+////                                  return fScale_gray(d.properties.VoteRate);               
+//                             if(d.properties[index] >= range){
+//                                return fScale_green(d.properties[index]);
+//                              }else {
+//                                  return fScale_gray(d.properties[index]);
+//                              }
+//                            }
+//                        });
             
                 
             }
@@ -289,7 +870,7 @@
 
             
             // 2.地理投影器: 設定投影方式(麥卡托)、定位點([經度,緯度])、縮放(scale)
-             projection = d3.geo.mercator().center([121,23.5]).scale(3000);    
+             projection = d3.geo.mercator().center([121,25]).scale(7000);    
             
             // 3.路徑產生器: d3.geo.path()
             var path = d3.geo.path().projection(projection);
@@ -411,6 +992,13 @@
 //            console.log(selection);
 
         }
+
+
+
+
+
+
+
 
 
     </script>
