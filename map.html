@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Untitled Document</title>
+    <script src="https://d3js.org/d3.v3.js"></script>
+    <script src="topojson.min.js"></script>
+    <style>
+        body{
+            background-color: #555;
+        }
+        .map-boundary {
+          stroke: #eee;
+          stroke-width: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <svg width="1200" height="700"></svg>
+    
+    <script>
+        
+
+
+
+        var projection;
+        
+        //這裡要放選舉數據
+
+
+             //1.地理資料檔: GeoJSON or TopoJSON
+                d3.json("TOWN_MOI_1071031.json", function(mapDataSet) {
+
+        //            console.log(mapDataSet);
+
+                    bind(mapDataSet);
+//                    console.log("test2");
+                    render(mapDataSet); 
+//                    console.log("test");
+
+                }); 
+            
+            
+
+                   
+        
+        
+        
+        
+        
+        
+        
+        
+
+        
+        function render(dataSet){
+            //從這裡開始修改 
+            
+            console.log(dataSet);
+            
+            var fScale_blue = d3.scale.linear().domain([0,1]).range(["#CCEEFF","#003377"]);
+            var fScale_green = d3.scale.linear().domain([0.3,1]).range(["#CCFF99","#227700"]);
+            var fScale_gray = d3.scale.linear().domain([0.3,1]).range(["rgba(0,0,0,0)","rgba(0,0,0,1)"]);
+            
+//            var fScale = d3.scale.linear().domain(0,d3.max(dataSet,function(d){return d.values;})).range("#00f","#f00");
+
+            
+//            console.log("done");
+            
+            
+            
+//            
+            d3.select("svg").selectAll("path")
+            .attr({
+                fill: "black"
+            })
+            // .on("mouseover", handleMouseOver)
+            // .on("mouseout", handleMouseOut);
+
+            
+            console.log("rendered");
+            
+
+        }
+        
+
+
+
+
+        
+        function bind(topoRoot, dataSet){
+            
+            
+            
+            
+
+            
+            // 2.地理投影器: 設定投影方式(麥卡托)、定位點([經度,緯度])、縮放(scale)
+             projection = d3.geo.mercator().center([121,24]).scale(6000);    
+            
+            // 3.路徑產生器: d3.geo.path()
+            var path = d3.geo.path().projection(projection);
+            
+            
+//             4.地理資料檔: 使用topojson.js載入地理資料
+            var geoRoot = topojson.feature(topoRoot, topoRoot.objects["TOWN_MOI_1071031"]); //這邊要根據topojson檔去調整
+                
+//           console.log(geoRoot);
+            
+            // geoRoot.features.forEach(function(d){
+//                
+              
+                
+                
+//                 for(var i=0; i<dataSet.length; i++){
+                    
+//                     //把數據都對起來
+//                     if(d.properties.COUNTYNAME===dataSet[i].直轄市 && d.properties.TOWNNAME===dataSet[i].行政區別){
+                        
+//                         //topojson裡頭新增key，綁定dataSet的數據
+//                    d.properties.values = dataSet[i].得票率;
+//                    d.properties.party = dataSet[i].推薦政黨;
+                        
+//                    }
+//                 }
+// //                console.log(dataSet[i].地區);
+                
+// //                console.log("here");
+//                 console.log(d.properties.COUNTYNAME, d.properties.TOWNNAME, d.properties.values);
+// //                d.properties.values = dataSet["地區"];
+                
+// //                
+// //                
+// //                if(dataSet[d.properties.COUNTYNAME]){ //這樣寫
+// //                   
+// //                    d.properties.count = dataSet[d.properties.COUNTYNAME];}
+// //                
+// //                else if(d.properties.COUNTYNAME[0]==="臺"){
+// //                            d.properties.count = dataSet["台"+d.properties.COUNTYNAME.substr(1)];
+// //                        }
+// //                else{
+// //                    d.properties.count = 0;
+// //                }
+// //                
+// //                console.log(d.properties.count,d.properties.COUNTYNAME);
+// ////                console.log("here");
+// ////                    console.log(d);
+// //                
+// //
+//             });
+            
+            
+            
+            
+            // 綁定path與載入的地理資料(features:每一地理區劃)
+            var selection = d3.select("svg").selectAll("path").data(geoRoot.features);
+            
+            
+              
+            selection.enter().append("path").classed("map-boundary", true).attr("d", path);
+            selection.exit().remove();
+            
+            console.log("binded");
+//            console.log(selection);
+
+        }
+    </script>
+
+</body>
+</html>
